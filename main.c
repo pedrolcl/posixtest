@@ -8,6 +8,18 @@
 #define STRINGIFY2(x) #x
 #define STRINGIFY(macro) STRINGIFY2(macro)
 
+static inline int safe_fileno(FILE *f)
+{
+    fflush(f);
+    return fileno(f);
+}
+
+static inline void fresync(FILE *f)
+{
+    off_t off = lseek(safe_fileno(f), 0, SEEK_CUR);
+    fseek(f, off, SEEK_SET);
+}
+
 int createtestfile(size_t test_size, char *fname)
 {
     int ret = EXIT_SUCCESS;
@@ -56,30 +68,31 @@ int testfile(const char *filePath)
         fprintf(stderr, "Error fopen(%s)\n", filePath);
         ret = EXIT_FAILURE;
     } else {
-        int fd = fileno(file);
+        int fd = safe_fileno(file);
         if (fd == -1) {
-            fprintf(stderr, "Error fileno()\n");
+            fprintf(stderr, "Error fileno(file)\n");
             fclose(file);
             return EXIT_FAILURE;
         }
 
-        ret = fseek(file, filePos, SEEK_SET);
-        if (ret != 0) {
-            fprintf(stderr, "Error fseek(%ld)->%d\n", filePos, ret);
-            fclose(file);
-            return EXIT_FAILURE;
-        }
-
-        long pos = ftell(file);
+        off_t pos = lseek(fd, filePos, SEEK_SET);
         if (pos != filePos) {
-            fprintf(stderr, "Error ftell()->%ld and filePos=%ld\n", pos, filePos);
+            fprintf(stderr, "Error lseek(fd,%ld)->%d\n", filePos, pos);
+            fclose(file);
+            return EXIT_FAILURE;
+        }
+        fresync(file);
+
+        pos = ftell(file);
+        if (pos != filePos) {
+            fprintf(stderr, "Error ftell(file)->%ld and filePos=%ld\n", pos, filePos);
             fclose(file);
             return EXIT_FAILURE;
         }
 
-        long pos2 = lseek(fd, 0, SEEK_CUR);
-        if (pos2 != pos) {
-            fprintf(stderr, "Error ftell()->%ld and lseek(fd)->%ld\n", pos, pos2);
+        pos = lseek(fd, 0, SEEK_CUR);
+        if (pos != filePos) {
+            fprintf(stderr, "Error lseek(fd)->%ld and filePos=%ld\n", pos, filePos);
             fclose(file);
             return EXIT_FAILURE;
         }
@@ -91,9 +104,9 @@ int testfile(const char *filePath)
             return EXIT_FAILURE;
         }
 
-        pos2 = lseek(dupfd, 0, SEEK_CUR);
-        if (pos2 != pos) {
-            fprintf(stderr, "Error ftell()->%ld and lseek(dupfd)->%ld\n", pos, pos2);
+        pos = lseek(dupfd, 0, SEEK_CUR);
+        if (pos != filePos) {
+            fprintf(stderr, "Error lseek(dupfd)->%ld and filePos=%ld\n", pos, filePos);
             fclose(file);
             return EXIT_FAILURE;
         }
@@ -112,9 +125,9 @@ int testfile(const char *filePath)
             return EXIT_FAILURE;
         }
 
-        pos2 = lseek(dupfd, 0, SEEK_CUR);
-        if (pos2 != pos) {
-            fprintf(stderr, "Error ftell(dupfile)->%ld and lseek(dupfd)->%ld\n", pos, pos2);
+        pos = lseek(dupfd, 0, SEEK_CUR);
+        if (filePos != pos) {
+            fprintf(stderr, "Error lseek(dupfd)->%ld and filePos=%ld\n", pos, filePos);
             fclose(file);
             return EXIT_FAILURE;
         }
