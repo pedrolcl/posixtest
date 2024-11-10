@@ -5,10 +5,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define STRINGIFY2(x) #x
+#define STRINGIFY(macro) STRINGIFY2(macro)
+
 int createtestfile(size_t test_size, char *fname)
 {
     int ret = EXIT_SUCCESS;
-    static char template[] = "/tmp/testfileXXXXXX";
+    static char template[] = STRINGIFY(BUILD_DIR) "/testfileXXXXXX";
     strcpy(fname, template);
     int fd = mkstemp(fname);
     if (fd == -1) {
@@ -62,21 +65,21 @@ int testfile(const char *filePath)
 
         ret = fseek(file, filePos, SEEK_SET);
         if (ret != 0) {
-            fprintf(stderr, "Error fseek(%d)->%d\n", filePos, ret);
+            fprintf(stderr, "Error fseek(%ld)->%d\n", filePos, ret);
             fclose(file);
             return EXIT_FAILURE;
         }
 
         long pos = ftell(file);
         if (pos != filePos) {
-            fprintf(stderr, "Error ftell()->%d and filePos=%d\n", pos, filePos);
+            fprintf(stderr, "Error ftell()->%ld and filePos=%ld\n", pos, filePos);
             fclose(file);
             return EXIT_FAILURE;
         }
 
         long pos2 = lseek(fd, 0, SEEK_CUR);
         if (pos2 != pos) {
-            fprintf(stderr, "Error ftell()->%d and lseek(fd)->%d\n", pos, pos2);
+            fprintf(stderr, "Error ftell()->%ld and lseek(fd)->%ld\n", pos, pos2);
             fclose(file);
             return EXIT_FAILURE;
         }
@@ -90,7 +93,7 @@ int testfile(const char *filePath)
 
         pos2 = lseek(dupfd, 0, SEEK_CUR);
         if (pos2 != pos) {
-            fprintf(stderr, "Error ftell()->%d and lseek(dupfd)->%d\n", pos, pos2);
+            fprintf(stderr, "Error ftell()->%ld and lseek(dupfd)->%ld\n", pos, pos2);
             fclose(file);
             return EXIT_FAILURE;
         }
@@ -104,14 +107,14 @@ int testfile(const char *filePath)
 
         pos = ftell(dupfile);
         if (pos != filePos) {
-            fprintf(stderr, "Error ftell(dupfile)->%d and filePos=%d\n", pos, filePos);
+            fprintf(stderr, "Error ftell(dupfile)->%ld and filePos=%ld\n", pos, filePos);
             fclose(file);
             return EXIT_FAILURE;
         }
 
         pos2 = lseek(dupfd, 0, SEEK_CUR);
         if (pos2 != pos) {
-            fprintf(stderr, "Error ftell(dupfile)->%d and lseek(dupfd)->%d\n", pos, pos2);
+            fprintf(stderr, "Error ftell(dupfile)->%ld and lseek(dupfd)->%ld\n", pos, pos2);
             fclose(file);
             return EXIT_FAILURE;
         }

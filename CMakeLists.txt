@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(testdup LANGUAGES C)
 
 add_executable(testdup main.c)
+target_compile_definitions(testdup PRIVATE BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR})
 
 enable_testing()
 
