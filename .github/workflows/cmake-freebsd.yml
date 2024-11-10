@@ -1,0 +1,32 @@
+name: FreeBSD CI
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: FreeBSD CI
+    env:
+      BUILD_TYPE: RelWithDebInfo
+    steps:
+    - uses: actions/checkout@v4
+    - name: FreeBSD test
+      id: test
+      uses: vmactions/freebsd-vm@v1
+      with:
+        envs: 'BUILD_TYPE'
+        usesh: true
+        prepare: |
+          pkg install -y \
+              cmake \
+              ninja \
+              pkgconf
+        run: |
+          set -e -x
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+          cd ${{github.workspace}}/build
+          ctest -C ${{env.BUILD_TYPE}}
